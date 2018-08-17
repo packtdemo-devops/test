@@ -1,0 +1,24 @@
+#!/bin/bash
+# EFS Mount:
+efs_directory=/mnt/efs
+file_system_id=fs-7b3df742
+ 
+instance_id=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+subnet_id=$(aws ec2 describe-instances --instance-id $instance_id --output text --query 'Reservations[*].Instances[*].SubnetId')
+fs_ip_address=$(aws efs describe-mount-targets --file-system-id ${file_system_id} --region ap-southeast-2 --output text --query "MountTargets[?SubnetId == \`$subnet_id\`].IpAddress")
+ 
+# Create Mount Folder:
+sudo mkdir -p ${efs_directory}
+ 
+echo $fs_ip_address
+
+# changing ownership of fstab file 
+sudo chown ec2-user:ec2-user /etc/fstab
+# Add FSTAB Entry:
+sudo echo "${fs_ip_address}:/ ${efs_directory} nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2" >> /etc/fstab
+  
+ 
+# Mount All Drives:
+sudo mount -a
+ 
+sudo chmod -R 777 /mnt/efs
